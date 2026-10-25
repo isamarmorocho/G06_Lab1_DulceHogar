@@ -73,3 +73,15 @@ Flujo de una petición: **ruta → controlador → servicio → modelo** y de vu
 - Herramienta(s) usada(s): Claude (asistente de IA).
 - Para qué la usamos: entender la estructura MVC y las instrucciones del laboratorio, y consultar dudas y errores.
 - Qué verificamos o corregimos nosotros: ejecutamos la API, probamos cada endpoint en Postman, comprobamos los códigos 200, 201, 204, 400 y 404 y adaptamos los nombres, campos y validaciones a nuestra entidad.
+
+---
+
+## Lab 2 · Persistencia con Prisma + PostgreSQL
+
+### Aporte de cada integrante (Lab 2)
+
+| Integrante | Qué hizo (archivos / pasos) |
+|---|---|
+| Joselyn Morocho | Instaló y configuró Prisma 7.10.1, escribió `schema.prisma` (Postre y Cliente), creó la migración `init` y el seed. Archivos: `prisma/schema.prisma`, `prisma/migrations/`, `prisma/seed.js`, `prisma.config.ts`, `src/db/prisma.js`, `src/server.js`, `package.json`, `.env.example`, `docker-compose.yml`. |
+| Jonathan Guayta | Pendiente |
+| Matias Rojas | Pendiente |
