@@ -1,0 +1,35 @@
+// Lab 2 · Persistencia con Prisma + PostgreSQL
+// Grupo: G06 · Emprendimiento: Dulce Hogar (repostería casera)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+model Postre {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @unique @db.VarChar(80)
+  precio    Float
+  stock     Int      @default(0)
+  categoria String?  @db.VarChar(40)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("postres")
+}
+
+
+model Cliente {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @db.VarChar(80)
+  correo    String   @unique @db.VarChar(120)
+  telefono  String?  @db.VarChar(20)
+  direccion String?  @db.VarChar(120)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("clientes")
+}

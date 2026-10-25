@@ -3,15 +3,25 @@
   "version": "1.0.0",
   "description": "Laboratorio 1 · Desarrollo Web Avanzado · Mini-API MVC con CRUD para el emprendimiento del grupo",
   "main": "src/server.js",
-  "scripts": {
+   "scripts": {
     "dev": "node --watch src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
     "dotenv": "^16.4.5",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "prisma": "7.10.1"
   }
 }
