@@ -82,6 +82,6 @@ Flujo de una petición: **ruta → controlador → servicio → modelo** y de vu
 
 | Integrante | Qué hizo (archivos / pasos) |
 |---|---|
-| Joselyn Morocho (Persona 1) | Instaló y configuró Prisma 7.10.1, escribió `schema.prisma` (Postre y Cliente), creó la migración `init` y el seed. Archivos: `prisma/schema.prisma`, `prisma/migrations/`, `prisma/seed.js`, `prisma.config.ts`, `src/db/prisma.js`, `src/server.js`, `package.json`, `.env.example`, `docker-compose.yml`. |
-| Jonathan Guayta (Persona 2) | Pendiente |
-| Matias Rojas (Persona 3) | Pendiente |
+| Joselyn Morocho | Instaló y configuró Prisma 7.10.1, escribió `schema.prisma` (Postre y Cliente), creó la migración `init` y el seed. Archivos: `prisma/schema.prisma`, `prisma/migrations/`, `prisma/seed.js`, `prisma.config.ts`, `src/db/prisma.js`, `src/server.js`, `package.json`, `.env.example`, `docker-compose.yml`. |
+| Jonathan Guayta | Pendiente |
+| Matias Rojas | Pendiente |
