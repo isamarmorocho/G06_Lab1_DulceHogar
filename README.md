@@ -17,7 +17,7 @@ cp .env.example .env      # en Windows: copy .env.example .env
 npm run dev               # http://localhost:3000
 ```
 
-Importa en Postman `postman/GXX_Lab1.postman_collection.json` y ejecuta **Run collection**.
+Importa en Postman `postman/G06_Lab1.postman_collection.json` y ejecuta **Run collection**.
 
 ## Estructura MVC en capas
 
@@ -26,14 +26,14 @@ src/
 ├─ app.js            ← arma la app: express.json, middlewares y prefijo /api
 ├─ server.js         ← solo levanta el servidor (lee .env)
 ├─ routes/
-│  ├─ index.js       ← archivo principal: monta cada recurso (/api/<entidad>)
-│  └─ <entidad>.routes.js  ← verbo + URL → acción del controlador
+│  ├─ index.js       ← archivo principal: monta cada recurso (/api/postres)
+│  └─ postre.routes.js  ← verbo + URL → acción del controlador
 ├─ controllers/      ← lee req, llama al servicio, decide código + JSON
 ├─ services/         ← reglas de negocio, validaciones y acceso a datos
-├─ models/           ← campos de la entidad y archivo JSON (Lab 2: schema.prisma)
+├─ db/prisma.js      ← (Lab 2) única instancia de PrismaClient
 ├─ middlewares/      ← logger, notFound, errorHandler
 └─ utils/httpError.js
-data/                ← archivo JSON con los registros
+prisma/              ← (Lab 2) schema.prisma, migrations/ y seed.js (el modelo ya no es un archivo .js ni un JSON)
 ```
 
 Flujo de una petición: **ruta → controlador → servicio → modelo** y de vuelta. El proyecto usa CommonJS (`require` / `module.exports`).
@@ -78,10 +78,67 @@ Flujo de una petición: **ruta → controlador → servicio → modelo** y de vu
 
 ## Lab 2 · Persistencia con Prisma + PostgreSQL
 
+La API ahora guarda sus datos en **PostgreSQL** a través de **Prisma 7.10.1**. El controlador y las rutas del CRUD son los del Lab 1 (solo se agregó `/lote`); cambió el servicio (ahora usa Prisma) y el modelo (ahora es `prisma/schema.prisma`).
+
+### Cómo crear la base y arrancar
+
+1. Levantar PostgreSQL 17 con Docker (o usa una base en Neon):
+   ```bash
+   docker compose up -d
+   ```
+2. Copiar el archivo de entorno y revisar `DATABASE_URL`:
+   ```bash
+   cp .env.example .env      # en Windows: copy .env.example .env
+   ```
+3. Instalar, crear las tablas, generar el cliente y cargar los datos:
+   ```bash
+   npm install
+   npx prisma migrate dev --name init   # crea las tablas desde schema.prisma
+   npx prisma generate                  # Prisma 7: genera el cliente aparte
+   npx prisma db seed                   # carga los datos de prueba (se puede repetir)
+   npm run dev                          # http://localhost:3000
+   ```
+4. Opcional: `npx prisma studio` para ver los datos en el navegador.
+
+### Modelo de datos
+
+- `Postre` (tabla `postres`): `id`, `nombre` (único), `precio`, `stock`, `categoria` (opcional), `created_at`, `updated_at`.
+- `Cliente` (tabla `clientes`): `id`, `nombre`, `correo` (único), `telefono` (opcional), `direccion` (opcional), `created_at`.
+- El diagrama completo y las relaciones están en [MODELO_ER.md](MODELO_ER.md).
+
+### Errores traducidos por el errorHandler
+
+| Situación | Código |
+|---|---|
+| Datos inválidos (validaciones del servicio) | 400 |
+| Registro inexistente | 404 |
+| Valor único repetido (por ejemplo, el nombre de un postre) | 409 |
+
+### Endpoint con transacción: `POST /api/postres/lote`
+
+Recibe un **arreglo** de postres y los crea **todos o ninguno** con `prisma.$transaction`. Cada ítem se valida dentro de la transacción: si uno falla, se hace ROLLBACK y no queda ningún registro guardado.
+
+| Caso | Respuesta |
+|---|---|
+| Todos los ítems son válidos | 201 con los registros creados (COMMIT) |
+| El body no es un arreglo, o está vacío | 400 |
+| Un ítem es inválido | 400 con el número del ítem (ROLLBACK) |
+| Un ítem repite un valor único | 409 (ROLLBACK) |
+
+### Colección de Postman
+
+`postman/G06_Lab2.postman_collection.json` tiene dos carpetas: **CRUD con Prisma** (incluye 400, 404 y 409) y **Transacción** (COMMIT, ROLLBACK 400, ROLLBACK 409 y la verificación de que no quedó nada guardado). Evidencias: `evidencias/postman-run.png` y `evidencias/prisma-studio.png`.
+
 ### Aporte de cada integrante (Lab 2)
 
 | Integrante | Qué hizo (archivos / pasos) |
 |---|---|
-| Joselyn Morocho | Instaló y configuró Prisma 7.10.1, escribió `schema.prisma` (Postre y Cliente), creó la migración `init` y el seed. Archivos: `prisma/schema.prisma`, `prisma/migrations/`, `prisma/seed.js`, `prisma.config.ts`, `src/db/prisma.js`, `src/server.js`, `package.json`, `.env.example`, `docker-compose.yml`. |
-| Matias Rojas | Pasó el servicio a Prisma (create, update, remove y la transacción `createMany`) y adaptó el errorHandler para traducir errores de Prisma (409 y 404) y por ultimo elimno el antiguo modelado que no utilizaba prisma. Archivos modificados: `src/services/postre.service.js`, `src/middlewares/errorHandler.js`. |
-| Jonathan Guayta | Pendiente |
+| Joselyn Morocho | Instaló y configuró Prisma 7.10.1, escribió `schema.prisma`, creó la migración y el seed. Archivos: `prisma/schema.prisma`, `prisma/migrations/`, `prisma/seed.js`, `prisma.config.ts`, `src/db/prisma.js`, `src/server.js`, `package.json`, `.env.example`. |
+| Matias Rojas | Pasó el servicio a Prisma (create, update, remove y la transacción `createMany`) y adaptó el errorHandler (409 y 404). Archivos: `src/services/postre.service.js`, `src/middlewares/errorHandler.js`. |
+| Jonathan Guayta | Escribió el modelo ER, agregó `createMany` al controlador y la ruta `/lote`, adaptó y ejecutó la colección de Postman y completó el README. Archivos: `MODELO_ER.md`, `src/controllers/postre.controller.js`, `src/routes/postre.routes.js`, `postman/`, `README.md`. |
+
+### Declaración de uso de IA (Lab 2)
+
+- Herramienta(s) usada(s): Claude (asistente de IA).
+- Para qué la usamos: entender las diferencias de Prisma 7, los errores de la migración y cómo funciona la transacción.
+- Qué verificamos o corregimos nosotros: ejecutamos las migraciones y el seed en una base vacía, probamos el CRUD y el endpoint `/lote` en Postman (COMMIT y ROLLBACK), revisamos los datos en Prisma Studio y adaptamos los nombres y las validaciones a nuestra entidad.
