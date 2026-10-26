@@ -1,5 +1,0 @@
-[
-  { "id": 1, "nombre": "Torta de chocolate", "precio": 12.5, "stock": 8, "categoria": "tortas" },
-  { "id": 2, "nombre": "Cupcake de vainilla", "precio": 2.0, "stock": 30, "categoria": "cupcakes" },
-  { "id": 3, "nombre": "Brownie", "precio": 1.5, "stock": 25, "categoria": "brownies" }
-]
