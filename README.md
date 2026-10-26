@@ -83,5 +83,5 @@ Flujo de una petición: **ruta → controlador → servicio → modelo** y de vu
 | Integrante | Qué hizo (archivos / pasos) |
 |---|---|
 | Joselyn Morocho | Instaló y configuró Prisma 7.10.1, escribió `schema.prisma` (Postre y Cliente), creó la migración `init` y el seed. Archivos: `prisma/schema.prisma`, `prisma/migrations/`, `prisma/seed.js`, `prisma.config.ts`, `src/db/prisma.js`, `src/server.js`, `package.json`, `.env.example`, `docker-compose.yml`. |
+| Matias Rojas | Pasó el servicio a Prisma (create, update, remove y la transacción `createMany`) y adaptó el errorHandler para traducir errores de Prisma (409 y 404) y por ultimo elimno el antiguo modelado que no utilizaba prisma. Archivos modificados: `src/services/postre.service.js`, `src/middlewares/errorHandler.js`. |
 | Jonathan Guayta | Pendiente |
-| Matias Rojas | Pendiente |
