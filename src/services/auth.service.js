@@ -9,7 +9,7 @@ const HttpError = require("../utils/httpError");
 const publicUser = { id: true, email: true, name: true, role: true, cliente: true };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-// Hashea con bcrypt.hash(password, 10) y crea el usuario CON su perfil de cliente en una escritura anidada:
+  // Hashea con bcrypt.hash(password, 10) y crea el usuario CON su perfil de cliente en una escritura anidada:
 // prisma.user.create({ data: { ..., cliente: { create: { nombre: name, correo: email, telefono: phone } } }, select: publicUser })
 // Un correo repetido lanza P2002 y errorHandler responde 409.
 const register = async ({ email, password, name, phone }) => {
@@ -32,11 +32,20 @@ const register = async ({ email, password, name, phone }) => {
   });
 };
 
-// TODO (Persona 2): busca con findUnique({ where: { email } }) y compara con bcrypt.compare.
 // Si el usuario no existe O la clave no coincide → 401 con el MISMO mensaje.
 // Devuelve jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || "4h" })
 const login = async ({ email, password }) => {
-  throw new HttpError(501, "login() pendiente en el servicio");
+  const invalid = new HttpError(401, "Correo o contraseña inválidos");
+  if (typeof email !== "string" || typeof password !== "string") throw invalid;
+
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) throw invalid;
+  const ok = await bcrypt.compare(password, user.password);
+  if (!ok) throw invalid;
+
+  return jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN || "4h",
+  });
 };
 
 const getProfile = async (id) => {
