@@ -18,7 +18,10 @@ const authenticateToken = (req, res, next) => {
 // TODO (Persona 2): requireRole(...roles) devuelve un middleware (req, res, next).
 // Si req.user.role NO está en roles → next(new HttpError(403, "...")); si está → next().
 const requireRole = (...roles) => (req, res, next) => {
-  next(new HttpError(501, "requireRole pendiente"));
+   if (!req.user || !roles.includes(req.user.role)) {
+    return next(new HttpError(403, "No tienes permisos para esta acción"));
+  }
+  next();
 };
 
 module.exports = { authenticateToken, requireRole };
