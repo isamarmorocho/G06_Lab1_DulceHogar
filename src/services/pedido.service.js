@@ -25,16 +25,37 @@ const validarItems = (items) => {
     throw new HttpError(400, "No repitas el mismo postre: suma las cantidades");
 };
 
-// TODO (Persona 2) · TRANSACCIÓN: descuenta stock y crea el pedido con sus ítems, o no hace nada
-// 1. validarItems(items) y clienteDe(userId)
-// 2. prisma.$transaction(async (tx) => { ... }) y, por cada ítem:
-//    - tx.postre.findUnique → si no existe: 404
-//    - tx.postre.updateMany({ where: { id, stock: { gte: cantidad } }, data: { stock: { decrement: cantidad } } })
-//    - si count === 0 → 409 «Stock insuficiente» (ROLLBACK)
-//    - acumula total y la línea { postreId, cantidad, precioUnitario: postre.precio }
-// 3. tx.pedido.create({ data: { clienteId, total, items: { create: lineas } }, include: pedidoInclude })
+// TRANSACCIÓN: descuenta stock y crea el pedido con sus ítems, o no hace nada.
+// Dentro se usa tx (NO prisma). Si algo lanza un error, Prisma hace ROLLBACK automático.
 const create = async (userId, items) => {
-  throw new HttpError(501, "create() pendiente en el servicio");
+  validarItems(items);
+  const cliente = await clienteDe(userId);
+
+  return prisma.$transaction(async (tx) => {
+    let total = 0;
+    const lineas = [];
+
+    for (const { postreId, cantidad } of items) {
+      const postre = await tx.postre.findUnique({ where: { id: postreId } });
+      if (!postre) throw new HttpError(404, `Postre ${postreId} no encontrado`); // → ROLLBACK
+
+      // Actualización CONDICIONAL: solo descuenta si alcanza. Si dos pedidos llegan a la vez,
+      // la base garantiza que no se venda la misma unidad dos veces.
+      const { count } = await tx.postre.updateMany({
+        where: { id: postreId, stock: { gte: cantidad } },
+        data: { stock: { decrement: cantidad } },
+      });
+      if (count === 0) throw new HttpError(409, `Stock insuficiente de "${postre.nombre}"`); // → ROLLBACK
+
+      total += Number(postre.precio) * cantidad;
+      lineas.push({ postreId, cantidad, precioUnitario: postre.precio });
+    }
+
+    return tx.pedido.create({
+      data: { clienteId: cliente.id, total: Math.round(total * 100) / 100, items: { create: lineas } },
+      include: pedidoInclude,
+    }); 
+  });
 };
 
 const listByUser = async (userId) => {
