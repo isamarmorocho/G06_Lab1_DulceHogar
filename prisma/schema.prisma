@@ -1,28 +1,42 @@
-// Lab 2 · Persistencia con Prisma + PostgreSQL
+// Lab 3 · Relaciones, mapeo y consultas avanzadas
 // Grupo: G06 · Emprendimiento: Dulce Hogar (repostería casera)
+// Relaciones: User 1:1 Cliente · Cliente 1:N Pedido · Pedido N:M Postre (tabla ItemPedido)
+// Tras cualquier cambio: npx prisma migrate dev --name <cambio> y luego npx prisma generate
 
 generator client {
   provider = "prisma-client-js"
 }
 
+// Prisma 7: la URL ya no va aquí; está en prisma.config.ts
 datasource db {
   provider = "postgresql"
 }
 
-
-model Postre {
-  id        Int      @id @default(autoincrement())
-  nombre    String   @unique @db.VarChar(80)
-  precio    Float
-  stock     Int      @default(0)
-  categoria String?  @db.VarChar(40)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@map("postres")
+enum Role {
+  USER
+  ADMIN
 }
 
+enum EstadoPedido {
+  PENDIENTE
+  ENTREGADO
+  CANCELADO
+}
 
+// Usuario que se autentica con JWT
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique @db.VarChar(120)
+  password  String // hash de bcrypt, nunca la clave en texto plano
+  name      String   @db.VarChar(100)
+  role      Role     @default(USER)
+  createdAt DateTime @default(now()) @map("created_at")
+  cliente   Cliente? // 1:1 → el lado sin FK
+
+  @@map("users")
+}
+
+// Segunda entidad del Lab 2, ahora relacionada
 model Cliente {
   id        Int      @id @default(autoincrement())
   nombre    String   @db.VarChar(80)
@@ -31,5 +45,56 @@ model Cliente {
   direccion String?  @db.VarChar(120)
   createdAt DateTime @default(now()) @map("created_at")
 
+  // 1:1 con User: la FK es única. Si se borra el usuario, se borra su perfil de cliente
+  userId Int?  @unique @map("user_id")
+  user   User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  pedidos Pedido[] // 1:N
+
   @@map("clientes")
+}
+
+// Entidad principal del Lab 1 y 2. precio pasa a Decimal (dinero) y stock es el recurso limitado
+model Postre {
+  id        Int           @id @default(autoincrement())
+  nombre    String        @unique @db.VarChar(80)
+  precio    Decimal       @db.Decimal(10, 2)
+  stock     Int           @default(0)
+  categoria String?       @db.VarChar(40)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+  items     ItemPedido[] // N:M con Pedido a través de ItemPedido
+
+  @@map("postres")
+}
+
+// 1:N: un cliente tiene muchos pedidos; cada pedido pertenece a un cliente
+// onDelete: Restrict → no se puede borrar un cliente que tiene pedidos (se conserva el historial)
+model Pedido {
+  id        Int          @id @default(autoincrement())
+  estado    EstadoPedido @default(PENDIENTE)
+  total     Decimal      @db.Decimal(10, 2)
+  createdAt DateTime     @default(now()) @map("created_at")
+  clienteId Int          @map("cliente_id")
+  cliente   Cliente      @relation(fields: [clienteId], references: [id], onDelete: Restrict)
+  items     ItemPedido[]
+
+  @@index([clienteId])
+  @@index([estado, createdAt])
+  @@map("pedidos")
+}
+
+// N:M explícita: la tabla intermedia guarda datos propios (cantidad y precio al momento de comprar)
+// pedido → Cascade: si se borra el pedido, se borran sus ítems
+// postre → Restrict: no se puede borrar un postre que ya se vendió
+model ItemPedido {
+  pedidoId       Int     @map("pedido_id")
+  postreId       Int     @map("postre_id")
+  cantidad       Int
+  precioUnitario Decimal @map("precio_unitario") @db.Decimal(10, 2)
+  pedido         Pedido  @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  postre         Postre  @relation(fields: [postreId], references: [id], onDelete: Restrict)
+
+  @@id([pedidoId, postreId])
+  @@map("items_pedido")
 }

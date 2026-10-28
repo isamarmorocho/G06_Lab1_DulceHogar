@@ -1,15 +1,17 @@
 const { Router } = require("express");
 const postreController = require("../controllers/postre.controller");
+const { authenticateToken, requireRole } = require("../middlewares/auth");
 
-
+// Leer el catálogo es público; modificarlo, solo ADMIN
 const router = Router();
+const onlyAdmin = [authenticateToken, requireRole("ADMIN")];
 
 router.get("/", postreController.list);
-
-router.post("/lote", postreController.createMany);
 router.get("/:id", postreController.getById);
-router.post("/", postreController.create);
-router.put("/:id", postreController.update);
-router.delete("/:id", postreController.remove);
+router.post("/", onlyAdmin, postreController.create);
+// OJO: /lote va ANTES de "/:id"; si no, Express interpretaría "lote" como un id
+router.post("/lote", onlyAdmin, postreController.createMany);
+router.put("/:id", onlyAdmin, postreController.update);
+router.delete("/:id", onlyAdmin, postreController.remove);
 
 module.exports = router;
