@@ -67,10 +67,28 @@ const listByUser = async (userId) => {
   });
 };
 
-// TODO (Persona 2) · TRANSACCIÓN: busca el pedido con sus ítems (404), verifica que sea del cliente (403)
-// y que esté PENDIENTE (409). Devuelve el stock de cada ítem con increment y cambia estado a CANCELADO.
+// TRANSACCIÓN: cambia el estado a CANCELADO y devuelve el stock de cada ítem.
+// 404 si el pedido no existe · 403 si no es del cliente · 409 si ya no está PENDIENTE
 const cancel = async (userId, pedidoId) => {
-  throw new HttpError(501, "cancel() pendiente en el servicio");
+ const cliente = await clienteDe(userId);
+
+  return prisma.$transaction(async (tx) => {
+    const pedido = await tx.pedido.findUnique({ where: { id: pedidoId }, include: { items: true } });
+    if (!pedido) throw new HttpError(404, "Pedido no encontrado");
+    if (pedido.clienteId !== cliente.id) throw new HttpError(403, "Este pedido no es tuyo");
+
+    // Cambio condicional: si dos cancelaciones llegan a la vez, solo una puede pasar de PENDIENTE a CANCELADO
+    const { count } = await tx.pedido.updateMany({
+      where: { id: pedidoId, estado: "PENDIENTE" },
+      data: { estado: "CANCELADO" },
+    });
+    if (count === 0) throw new HttpError(409, "El pedido ya no está pendiente");
+
+    for (const it of pedido.items) {
+      await tx.postre.update({ where: { id: it.postreId }, data: { stock: { increment: it.cantidad } } });
+    }
+    return tx.pedido.findUnique({ where: { id: pedidoId }, include: pedidoInclude });
+  });
 };
 
 module.exports = { create, listByUser, cancel };
