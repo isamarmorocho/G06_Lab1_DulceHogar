@@ -1,0 +1,912 @@
+{
+  "info": {
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "name": "Taller · A · Joselyn",
+    "description": "Colección individual: solo la preparación de tokens y la carpeta de la tarjeta. Ejecuta primero `npx prisma db seed`."
+  },
+  "item": [
+    {
+      "name": "Taller · Preparación (tokens)",
+      "item": [
+        {
+          "name": "P1. Login ADMIN (200)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@dulcehogar.com\",\n  \"password\": \"Admin123*\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"Entrega un JWT\", () => pm.expect(r.token.split(\".\")).to.have.length(3));",
+                  "pm.collectionVariables.set(\"adminToken\", r.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "P2. Login Ana (cliente con pedido ENTREGADO) (200)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ana@correo.com\",\n  \"password\": \"Ana12345*\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"Entrega un JWT\", () => pm.expect(r.token.split(\".\")).to.have.length(3));",
+                  "pm.collectionVariables.set(\"tokenAna\", r.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "P3. Registrar usuario nuevo sin compras (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailTaller}}\",\n  \"password\": \"Clave123*\",\n  \"name\": \"Usuario Taller\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"emailTaller\", \"taller\" + Date.now() + \"@correo.com\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"Sin contraseña en la respuesta\", () => pm.expect(r).to.not.have.property(\"password\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "P4. Login del usuario nuevo (200)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailTaller}}\",\n  \"password\": \"Clave123*\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"tokenNuevo\", pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Taller · A · Reseñas · Joselyn Morocho",
+      "item": [
+        {
+          "name": "A0. Obtener el id del Brownie (200)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/postres",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "postres"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "const b = r.find((p) => p.nombre === \"Brownie\");",
+                  "pm.test(\"Existe el Brownie\", () => pm.expect(b).to.exist);",
+                  "pm.collectionVariables.set(\"brownieId\", b.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A1. Reseñar con compra entregada (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/postres/{{brownieId}}/resenas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "postres",
+                "{{brownieId}}",
+                "resenas"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"calificacion\": 5,\n  \"comentario\": \"Delicioso\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAna}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"Devuelve la reseña\", () => { pm.expect(r.calificacion).to.eql(5); pm.expect(r.comentario).to.eql(\"Delicioso\"); });",
+                  "pm.test(\"Es del postre correcto\", () => pm.expect(r.postreId).to.eql(Number(pm.collectionVariables.get(\"brownieId\"))));",
+                  "pm.collectionVariables.set(\"resenaId\", r.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A2. Ya lo reseñó (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/postres/{{brownieId}}/resenas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "postres",
+                "{{brownieId}}",
+                "resenas"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"calificacion\": 4\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAna}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 Conflict\", () => pm.response.to.have.status(409));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"Mensaje claro\", () => pm.expect(r.error).to.include(\"reseñaste\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A3. Calificación fuera de 1–5 (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/postres/{{brownieId}}/resenas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "postres",
+                "{{brownieId}}",
+                "resenas"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"calificacion\": 6\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAna}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"Indica el campo\", () => pm.expect(r.error).to.include(\"calificacion\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A4. Comentario de más de 300 caracteres (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/postres/{{brownieId}}/resenas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "postres",
+                "{{brownieId}}",
+                "resenas"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"calificacion\": 4, \"comentario\": \"{{comentarioLargo}}\" }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAna}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"comentarioLargo\", \"a\".repeat(301));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"Indica el comentario\", () => pm.expect(r.error).to.include(\"comentario\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A5. Sin token (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/postres/{{brownieId}}/resenas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "postres",
+                "{{brownieId}}",
+                "resenas"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"calificacion\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401 Unauthorized\", () => pm.response.to.have.status(401));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"Pide el token\", () => pm.expect(r.error).to.include(\"token\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A6. Postre inexistente (404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/postres/999999/resenas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "postres",
+                "999999",
+                "resenas"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"calificacion\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAna}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404 Not Found\", () => pm.response.to.have.status(404));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"Postre no encontrado\", () => pm.expect(r.error).to.include(\"Postre\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A7. Reto: quien no lo compró no reseña (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/postres/{{brownieId}}/resenas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "postres",
+                "{{brownieId}}",
+                "resenas"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"calificacion\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenNuevo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403 Forbidden\", () => pm.response.to.have.status(403));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"Explica el motivo\", () => pm.expect(r.error).to.include(\"recibiste\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A8. Listar reseñas con promedio (200)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/postres/{{brownieId}}/resenas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "postres",
+                "{{brownieId}}",
+                "resenas"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"Forma { postreId, promedio, total, page, limit, pages, data }\", () => pm.expect(r).to.include.all.keys(\"postreId\",\"promedio\",\"total\",\"page\",\"limit\",\"pages\",\"data\"));",
+                  "pm.test(\"Promedio entre 1 y 5 (aggregate _avg)\", () => { pm.expect(r.promedio).to.be.within(1, 5); pm.expect(r.total).to.be.at.least(1); });",
+                  "pm.test(\"Incluye el nombre del autor, sin contraseña\", () => { pm.expect(r.data[0].user.name).to.be.a(\"string\"); pm.expect(r.data[0].user).to.not.have.property(\"password\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A9. Listar reseñas de un postre inexistente (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/postres/999999/resenas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "postres",
+                "999999",
+                "resenas"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404 Not Found\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A10. Borrar la reseña de otro usuario (403)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/resenas/{{resenaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "resenas",
+                "{{resenaId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenNuevo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403 Forbidden\", () => pm.response.to.have.status(403));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"Solo el autor o ADMIN\", () => pm.expect(r.error).to.include(\"autor\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A11. Borrar la propia reseña (204)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/resenas/{{resenaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "resenas",
+                "{{resenaId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAna}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"204 No Content\", () => pm.response.to.have.status(204));",
+                  "pm.test(\"Sin cuerpo\", () => pm.expect(pm.response.text()).to.eql(\"\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A12. Borrar una reseña inexistente (404)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/resenas/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "resenas",
+                "999999"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAna}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404 Not Found\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "tokenAna",
+      "value": ""
+    },
+    {
+      "key": "tokenNuevo",
+      "value": ""
+    },
+    {
+      "key": "emailTaller",
+      "value": ""
+    },
+    {
+      "key": "brownieId",
+      "value": ""
+    },
+    {
+      "key": "resenaId",
+      "value": ""
+    },
+    {
+      "key": "comentarioLargo",
+      "value": ""
+    },
+    {
+      "key": "categoriaNombre",
+      "value": ""
+    },
+    {
+      "key": "categoriaId",
+      "value": ""
+    },
+    {
+      "key": "postreBId",
+      "value": ""
+    },
+    {
+      "key": "cupcakeId",
+      "value": ""
+    },
+    {
+      "key": "stockInicial",
+      "value": ""
+    },
+    {
+      "key": "pedidoCId",
+      "value": ""
+    },
+    {
+      "key": "pedidoC2Id",
+      "value": ""
+    },
+    {
+      "key": "pedidoC3Id",
+      "value": ""
+    }
+  ]
+}
