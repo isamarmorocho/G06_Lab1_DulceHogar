@@ -10,12 +10,12 @@ const listOrders = async (req, res, next) => {
   }
 };
 
-// PATCH /api/admin/pedidos/:id/estado  { "estado": "ENTREGADO" }
+// PATCH /api/admin/pedidos/:id/estado  { "estado": "CONFIRMADO", "nota": "Pago recibido" }
 const updateOrderStatus = async (req, res, next) => {
   try {
     const id = Number.parseInt(req.params.id, 10);
     if (Number.isNaN(id)) throw new HttpError(400, "El id debe ser numérico");
-    res.json(await adminService.updateOrderStatus(id, req.body?.estado));
+    res.json(await adminService.updateOrderStatus(req.user.id, id, req.body ?? {}));
   } catch (err) {
     next(err);
   }
