@@ -238,3 +238,81 @@ Listado con **filtros** (`estado`, `desde`, `hasta`), **paginación** (`page`, `
 - Para qué la usamos: entender las relaciones de Prisma, los códigos 401/403/409, la transacción con actualización condicional y el despliegue en Railway.
 - Qué verificamos o corregimos nosotros: ejecutamos las migraciones y el seed, probamos la colección de Postman en local y en Railway, revisamos las claves foráneas en el SQL y en Prisma Studio, y adaptamos los nombres y las reglas a nuestro emprendimiento.
 
+## Taller · Nuevas funcionalidades para Dulce Hogar
+
+Cada integrante agregó una funcionalidad completa a la API: contrato, modelo en `schema.prisma` (una sola migración, `taller`), código en capas (`routes → controllers → services`), pruebas en Postman y sustentación. Se integraron en `main` sin romper el Lab 3.
+
+| Tarjeta | Integrante | Funcionalidad | Rama | Pull Request |
+|---|---|---|---|---|
+| A | Joselyn Morocho (integradora) | Reseñas de postres | `taller/a-joselyn` | (enlace) |
+| B | Matias Rojas | Categorías y búsqueda avanzada | `taller/b-matias` | (enlace) |
+| C | Jonathan Guayta | Flujo de estados con historial | `taller/c-jonathan` | (enlace) |
+
+Adaptación de nombres: `Product` → `Postre`, `Order` → `Pedido`, `OrderStatus` → `EstadoPedido`, `Customer` → `Cliente`.
+
+---
+
+## Taller · Tarjeta A · Reseñas · Joselyn Morocho
+
+| Método | Ruta | Rol | Body | Respuestas |
+|---|---|---|---|---|
+| POST | /api/postres/:id/resenas | Autenticado | `{ calificacion: 1-5, comentario? }` | 201 reseña · 400 calificacion fuera de 1–5 o comentario > 300 · 401 · 403 no lo ha recibido (reto) · 404 postre · **409 ya lo reseñó** |
+| GET | /api/postres/:id/resenas?page&limit | Público | — | 200 `{ postreId, promedio, total, page, limit, pages, data }` · 404 |
+| DELETE | /api/resenas/:id | Autor o ADMIN | — | 204 · 401 · 403 no es el autor · 404 |
+
+**Modelo:** `Resena` (1:N con `User` y con `Postre`) con `@@unique([userId, postreId])` (una reseña por usuario y postre). `onDelete: Cascade` en ambos lados, porque una reseña no tiene sentido sin su autor ni sin el postre que califica.
+
+**Reto opcional:** solo reseña quien tenga un pedido `ENTREGADO` que incluya ese postre (filtro `some`); si no, 403.
+
+---
+
+## Taller · Tarjeta B · Categorías y búsqueda avanzada · Matias Rojas
+
+| Método | Ruta | Rol | Body | Respuestas |
+|---|---|---|---|---|
+| POST | /api/categorias | ADMIN | `{ nombre }` | 201 · 400 nombre vacío · 401 · 403 · **409 duplicada** |
+| GET | /api/categorias | Público | — | 200 `[{ id, nombre, _count: { postres } }]` |
+| PUT | /api/postres/:id/categorias | ADMIN | `{ categoriaIds: [1, 2] }` | 200 postre con sus categorías · 400 no es un arreglo de enteros · 401 · 403 · 404 postre o categoría inexistente |
+| GET | /api/postres/search?q&categoria&min&max&sort&page&limit | Público | — | 200 `{ page, limit, total, pages, data }` · 400 sort o precio inválido |
+| GET | /api/categorias/:id/postres?page&limit | Público | — | 200 · 404 (reto opcional) |
+
+`sort` admite `precio_asc`, `precio_desc` o `nombre`. La ruta `/search` se declara **antes** de `/:id`.
+
+**Modelo:** `Categoria` con N:M **implícita** con `Postre` (Prisma crea la tabla intermedia `_CategoriaToPostre`); `nombre` es `@unique`. El `PUT` usa `set`, que **reemplaza** las categorías del postre.
+
+---
+
+## Taller · Tarjeta C · Flujo de estados con historial · Jonathan Guayta
+
+| Método | Ruta | Rol | Body | Respuestas |
+|---|---|---|---|---|
+| PATCH | /api/admin/pedidos/:id/estado | ADMIN | `{ estado, nota? }` | 200 pedido con su historial · 400 estado inválido o nota > 200 · 401 · 403 · 404 · **409 transición no permitida** (o el pedido cambió mientras tanto) |
+| GET | /api/pedidos/:id/historial | Dueño o ADMIN | — | 200 `{ pedidoId, estado, historial }` · 401 · 403 · 404 |
+
+**Transiciones válidas:** `PENDIENTE → CONFIRMADO → ENTREGADO` · `PENDIENTE` o `CONFIRMADO → CANCELADO`.
+
+**Modelo:** `HistorialEstadoPedido` (dos relaciones 1:N hacia la misma tabla): con `Pedido` en `Cascade` (el historial no existe sin el pedido) y con `User` en `Restrict` (no se borra a quien hizo cambios). Se agrega `CONFIRMADO` al enum `EstadoPedido` y un `@@index([pedidoId])`. El cambio de estado y el registro en el historial se guardan **juntos o ninguno** (`$transaction` con `updateMany` condicionado al estado actual); al cancelar se devuelve el stock.
+
+**Reto opcional:** la cancelación que hace el propio cliente (`PATCH /api/pedidos/:id/cancel`) también queda en el historial.
+
+---
+
+## Pruebas en Postman (Taller)
+
+- Colección: `postman/G06_Taller.postman_collection.json`: las carpetas del Lab 3 y, después, «Taller · Preparación», «Taller · A · …», «Taller · B · …» y «Taller · C · …».
+- Cada carpeta tiene más de 6 peticiones con `pm.test` sobre el código y sobre el cuerpo, y guarda los ids que crea con `pm.collectionVariables.set`.
+- Run collection sobre `main`: todo en verde, local y en la URL pública.
+
+## Aporte de cada integrante (Taller)
+
+| Integrante | Qué hizo (archivos / pasos) |
+|---|---|
+| Joselyn Morocho | Integradora: schema común y migración `taller`, unión de los Pull Request, colección completa y entrega. Tarjeta A: `resena.routes.js`, `resena.controller.js`, `resena.service.js` y las rutas de reseñas en `postre.routes.js` |
+| Matias Rojas | Tarjeta B: `categoria.routes.js`, `categoria.controller.js`, `categoria.service.js` y las rutas `search` y `categorias` en `postre.routes.js` |
+| Jonathan Guayta | Tarjeta C: cambio de estado con historial en `admin.service.js`, `getHistory` y el registro de la cancelación en `pedido.service.js`, y sus controladores y rutas |
+
+## Declaración de uso de IA (Taller)
+
+- Herramienta(s) usada(s): Claude (asistente de IA).
+- Para qué la usamos: entender los conceptos de cada tarjeta (único compuesto, N:M implícita, transacciones con actualización condicional), revisar errores y preparar preguntas de práctica para la sustentación.
+- Qué verificamos o corregimos nosotros: cada integrante programó y probó su tarjeta, ejecutó su colección de Postman, revisó la migración y puede explicar su código.
