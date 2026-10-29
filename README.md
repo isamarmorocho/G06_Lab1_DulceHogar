@@ -142,3 +142,99 @@ Recibe un **arreglo** de postres y los crea **todos o ninguno** con `prisma.$tra
 - Herramienta(s) usada(s): Claude (asistente de IA).
 - Para qué la usamos: entender las diferencias de Prisma 7, los errores de la migración y cómo funciona la transacción.
 - Qué verificamos o corregimos nosotros: ejecutamos las migraciones y el seed en una base vacía, probamos el CRUD y el endpoint `/lote` en Postman (COMMIT y ROLLBACK), revisamos los datos en Prisma Studio y adaptamos los nombres y las validaciones a nuestra entidad.
+
+- ---
+
+## Lab 3 · Relaciones, autenticación y despliegue
+
+La API de **Dulce Hogar** ahora tiene **autenticación con JWT**, **relaciones** entre entidades, **pedidos con transacción** y un **módulo de administración**. Está desplegada en **Render**.
+
+### URL pública
+
+**https://g06-lab1-dulcehogar.onrender.com** 
+
+### Usuarios de prueba (los crea el seed)
+
+| Rol | Correo | Contraseña |
+|---|---|---|
+| ADMIN | admin@dulcehogar.com | Admin123* |
+| USER (con perfil de cliente) | ana@correo.com | Ana12345* |
+
+### Cómo ejecutarlo en local
+
+```bash
+npm install
+cp .env.example .env            # en Windows: copy .env.example .env  (y cambia JWT_SECRET)
+docker compose up -d
+npx prisma migrate dev          # aplica las migraciones (init y relaciones)
+npx prisma generate
+npx prisma db seed
+npm run dev
+```
+
+### Endpoints
+
+Los errores responden en JSON `{ "error": "..." }`. Sin token → **401**; token inválido o rol insuficiente → **403**.
+
+| Verbo | Ruta | Rol | Éxito | Errores |
+|---|---|---|---|---|
+| POST | /api/auth/register | público | 201 | 400, 409 (correo repetido) |
+| POST | /api/auth/login | público | 200 (token) | 401 (mensaje genérico) |
+| GET | /api/auth/me | token | 200 | 401, 403 |
+| GET | /api/postres · /api/postres/:id | público | 200 | 400, 404 |
+| POST · PUT · DELETE | /api/postres · /api/postres/:id | ADMIN | 201 · 200 · 204 | 400, 401, 403, 404, 409 |
+| POST | /api/postres/lote | ADMIN | 201 | 400, 409 |
+| POST | /api/pedidos | USER | 201 | 400, 401, 403, 404, **409 (stock insuficiente)** |
+| GET | /api/pedidos | USER | 200 | 401, 403 |
+| PATCH | /api/pedidos/:id/cancel | USER (dueño) | 200 | 403, 404, 409 (ya no está pendiente) |
+| GET | /api/admin/pedidos?estado=&desde=&hasta=&page=&limit= | ADMIN | 200 `{ page, limit, total, pages, data }` | 400, 401, 403 |
+| PATCH | /api/admin/pedidos/:id/estado | ADMIN | 200 | 400, 404 |
+| GET | /api/admin/reportes/top-postres?limit= | ADMIN | 200 | 401, 403 |
+
+### Seguridad
+
+- Las contraseñas se guardan con **bcrypt** (`bcrypt.hash(password, 10)`) y **ninguna respuesta las devuelve** (se usa `select`).
+- `login` responde el **mismo 401** si el correo no existe o la clave es incorrecta.
+- La autenticación está en capas: `routes → controllers → services`. El JWT lleva `{ id, role }` y expira (`JWT_EXPIRES_IN`).
+- `JWT_SECRET` y `DATABASE_URL` **no están en GitHub**; en Railway se usa un secreto distinto al local.
+
+### Relaciones y decisiones de `onDelete`
+
+El modelo completo está en [MODELO_ER.md](MODELO_ER.md).
+
+| Relación | Tipo | `onDelete` | Justificación |
+|---|---|---|---|
+| User — Cliente | 1:1 | Cascade | El perfil no tiene sentido sin su cuenta |
+| Cliente — Pedido | 1:N | Restrict | Se conserva el historial de ventas |
+| Pedido — ItemPedido | 1:N | Cascade | Los ítems no existen sin su pedido |
+| Postre — ItemPedido | N:M (explícita) | Restrict | No se borra un postre ya vendido (409) |
+
+Mapeo: `enum` (`Role`, `EstadoPedido`), `Decimal(10,2)` para el dinero, `DateTime`, `@@index([estado, created_at])`, clave compuesta en `ItemPedido` y nombres en snake_case con `@map` / `@@map`.
+
+### Transacción de pedidos (el stock es el recurso limitado)
+
+`POST /api/pedidos` hace, dentro de `prisma.$transaction`, una **actualización condicional** (`stock >= cantidad`) por cada postre: si alguno no alcanza responde **409** y se hace **ROLLBACK**, sin dejar datos a medias. Dos pedidos simultáneos por la última unidad no pueden venderla dos veces. `PATCH /api/pedidos/:id/cancel` devuelve el stock en otra transacción.
+
+### Consultas avanzadas (módulo `/api/admin`)
+
+Listado con **filtros** (`estado`, `desde`, `hasta`), **paginación** (`page`, `limit`, `skip`/`take`), `count`, `include` y `orderBy`; y un reporte con **`groupBy`** de los postres más vendidos (sin contar pedidos cancelados).
+
+### Postman y evidencias
+
+- Colección: `postman/G06_Lab3.postman_collection.json` (25 peticiones: auth, roles, ROLLBACK, cancelación y consultas de admin). Entornos: `Local` y `Railway`.
+- `evidencias/postman-local.png`, `evidencias/railway-run.png` y `evidencias/prisma-studio.png`.
+
+### Aporte de cada integrante (Lab 3)
+
+| Integrante | Qué hizo (archivos / pasos) |
+|---|---|
+| Joselyn Morocho| Realiza las relaciones con su migración, el seed y el modelo ER |
+| Matias Rojas | Completa la autenticación en capas (registro, login, rutas protegidas por token y por rol) y la transacción de pedidos (descontar stock y cancelar) |
+| Jonathan Guayta | Completa el módulo de administración, listado con filtros y paginación, el reporte groupBy, además de adaptar y ejecutar la colección de Postman|
+
+### Declaración de uso de IA (Lab 3)
+
+- Herramienta(s) usada(s): Claude (asistente de IA).
+- Para qué la usamos: entender las relaciones de Prisma, los códigos 401/403/409, la transacción con actualización condicional y el despliegue en Railway.
+- Qué verificamos o corregimos nosotros: ejecutamos las migraciones y el seed, probamos la colección de Postman en local y en Railway, revisamos las claves foráneas en el SQL y en Prisma Studio, y adaptamos los nombres y las reglas a nuestro emprendimiento.
+
