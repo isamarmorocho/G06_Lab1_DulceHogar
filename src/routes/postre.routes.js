@@ -2,6 +2,7 @@ const { Router } = require("express");
 const postreController = require("../controllers/postre.controller");
 const { authenticateToken, requireRole } = require("../middlewares/auth");
 const resenaController = require("../controllers/resena.controller");
+const categoriaController = require("../controllers/categoria.controller");
 
 // Leer el catálogo es público; modificarlo, solo ADMIN
 const router = Router();
@@ -17,6 +18,9 @@ router.delete("/:id", onlyAdmin, postreController.remove);
 
 router.post("/:id/resenas", authenticateToken, resenaController.create);
 router.get("/:id/resenas", resenaController.listByPostre);
+
+router.post("/:id/categoria", authenticateToken, categoriaController.create);
+router.get("/:id/categoria", categoriaController.listByPostre);
 
 
 module.exports = router;
