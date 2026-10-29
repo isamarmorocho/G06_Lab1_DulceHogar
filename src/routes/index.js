@@ -4,6 +4,8 @@ const postreRoutes = require("./postre.routes");
 const pedidoRoutes = require("./pedido.routes");
 const adminRoutes = require("./admin.routes");
 
+const resenaRoutes = require("./resena.routes");
+router.use("/resenas", resenaRoutes);
 // Archivo principal de rutas: cada recurso se monta en su propio prefijo
 const router = Router();
 
