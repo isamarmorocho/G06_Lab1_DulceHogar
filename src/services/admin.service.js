@@ -57,10 +57,54 @@ const listOrders = async ({ estado, desde, hasta, page, limit }) => {
   return { page: pageNum, limit: take, total, pages: Math.ceil(total / take), data };
 };
 
-// Cambia el estado de un pedido (PENDIENTE, ENTREGADO, CANCELADO)
-const updateOrderStatus = async (id, estado) => {
+// Transiciones válidas: PENDIENTE → CONFIRMADO → ENTREGADO · PENDIENTE o CONFIRMADO → CANCELADO
+const TRANSICIONES = {
+  PENDIENTE: ["CONFIRMADO", "CANCELADO"],
+  CONFIRMADO: ["ENTREGADO", "CANCELADO"],
+  ENTREGADO: [],
+  CANCELADO: [],
+};
+
+// PATCH /api/admin/pedidos/:id/estado  { estado, nota? }
+// En UNA transacción: cambio condicional de estado + registro en el historial (+ devolver el stock si se cancela).
+// Si algo falla, no se guarda nada: el cambio y el historial van juntos o ninguno.
+const updateOrderStatus = async (adminId, pedidoId, { estado, nota } = {}) => {
   if (estado === undefined) throw new HttpError(400, "Envía el nuevo estado");
-  return prisma.pedido.update({ where: { id }, data: { estado: parseEstado(estado) } }); // no existe → P2025 → 404
+  parseEstado(estado); // estado inválido → 400
+  if (nota !== undefined && nota !== null && (typeof nota !== "string" || nota.length > 200))
+    throw new HttpError(400, "nota debe ser un texto de hasta 200 caracteres");
+
+  return prisma.$transaction(async (tx) => {
+    const pedido = await tx.pedido.findUnique({ where: { id: pedidoId }, include: { items: true } });
+    if (!pedido) throw new HttpError(404, "Pedido no encontrado");
+
+    if (!TRANSICIONES[pedido.estado].includes(estado))
+      throw new HttpError(409, `Transición no permitida: ${pedido.estado} → ${estado}`);
+
+    // Cambio CONDICIONAL: solo se aplica si el pedido SIGUE en el estado que leímos.
+    // Si otro administrador lo cambió mientras tanto, count = 0 y respondemos 409 (ROLLBACK)
+    const { count } = await tx.pedido.updateMany({
+      where: { id: pedidoId, estado: pedido.estado },
+      data: { estado },
+    });
+    if (count === 0) throw new HttpError(409, "El pedido cambió mientras tanto; vuelve a consultarlo");
+
+    await tx.historialEstadoPedido.create({
+      data: { pedidoId, estadoAnterior: pedido.estado, estadoNuevo: estado, nota: nota ?? null, cambiadoPorId: adminId },
+    });
+
+    // Al cancelar, el stock reservado vuelve al postre
+    if (estado === "CANCELADO") {
+      for (const it of pedido.items) {
+        await tx.postre.update({ where: { id: it.postreId }, data: { stock: { increment: it.cantidad } } });
+      }
+    }
+
+    return tx.pedido.findUnique({
+      where: { id: pedidoId },
+      include: { historial: { orderBy: { createdAt: "asc" } } },
+    });
+  });
 };
 
 // Consulta avanzada: agrupa los ítems por postre y suma las unidades vendidas (sin contar pedidos cancelados)
