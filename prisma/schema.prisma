@@ -1,6 +1,7 @@
-// Lab 3 · Relaciones, mapeo y consultas avanzadas
+// Taller · Nuevas funcionalidades (tarjetas A, B y C) sobre el Lab 3
 // Grupo: G06 · Emprendimiento: Dulce Hogar (repostería casera)
-// Relaciones: User 1:1 Cliente · Cliente 1:N Pedido · Pedido N:M Postre (tabla ItemPedido)
+// Lab 3: User 1:1 Cliente · Cliente 1:N Pedido · Pedido N:M Postre (tabla ItemPedido)
+// Taller: A Resena (1:N, único compuesto) · B Categoria (N:M implícita) · C HistorialEstadoPedido (estados + historial)
 // Tras cualquier cambio: npx prisma migrate dev --name <cambio> y luego npx prisma generate
 
 generator client {
@@ -21,6 +22,7 @@ enum EstadoPedido {
   PENDIENTE
   ENTREGADO
   CANCELADO
+  CONFIRMADO // Taller C: nuevo estado. Va al final del enum a propósito
 }
 
 // Usuario que se autentica con JWT
@@ -32,6 +34,9 @@ model User {
   role      Role     @default(USER)
   createdAt DateTime @default(now()) @map("created_at")
   cliente   Cliente? // 1:1 → el lado sin FK
+
+  resenas       Resena[] // Taller A
+  cambiosEstado HistorialEstadoPedido[] // Taller C: cambios de estado hechos por este usuario
 
   @@map("users")
 }
@@ -65,6 +70,9 @@ model Postre {
   updatedAt DateTime      @updatedAt @map("updated_at")
   items     ItemPedido[] // N:M con Pedido a través de ItemPedido
 
+  resenas    Resena[] // Taller A
+  categorias Categoria[] // Taller B: N:M implícita, Prisma crea la tabla intermedia _CategoriaToPostre
+
   @@map("postres")
 }
 
@@ -78,6 +86,8 @@ model Pedido {
   clienteId Int          @map("cliente_id")
   cliente   Cliente      @relation(fields: [clienteId], references: [id], onDelete: Restrict)
   items     ItemPedido[]
+
+  historial HistorialEstadoPedido[] // Taller C
 
   @@index([clienteId])
   @@index([estado, createdAt])
@@ -97,4 +107,50 @@ model ItemPedido {
 
   @@id([pedidoId, postreId])
   @@map("items_pedido")
+}
+
+// ───────────────────────── TALLER · TARJETA A ─────────────────────────
+// Reseñas: 1:N con User y con Postre. Un usuario reseña un mismo postre UNA sola vez (@@unique compuesto)
+// onDelete Cascade en ambos lados: si se borra el usuario o el postre, sus reseñas no tienen sentido
+model Resena {
+  id           Int      @id @default(autoincrement())
+  calificacion Int      @db.SmallInt // 1 a 5 (se valida en el servicio)
+  comentario   String?  @db.VarChar(300)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  userId   Int    @map("user_id")
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postreId Int    @map("postre_id")
+  postre   Postre @relation(fields: [postreId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postreId]) // una reseña por usuario y postre
+  @@map("resenas")
+}
+
+// ───────────────────────── TALLER · TARJETA B ─────────────────────────
+// Categorías: N:M implícita con Postre (un postre tiene varias categorías y una categoría agrupa muchos postres)
+model Categoria {
+  id      Int      @id @default(autoincrement())
+  nombre  String   @unique @db.VarChar(50)
+  postres Postre[] // el otro lado de la N:M implícita
+
+  @@map("categorias")
+}
+
+// ───────────────────────── TALLER · TARJETA C ─────────────────────────
+// Historial de estados: cada cambio de estado de un pedido queda registrado junto con quién lo hizo
+// Pedido → Cascade (el historial no existe sin el pedido) · User → Restrict (no se borra a quien hizo cambios)
+model HistorialEstadoPedido {
+  id             Int          @id @default(autoincrement())
+  pedidoId       Int          @map("pedido_id")
+  pedido         Pedido       @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  estadoAnterior EstadoPedido @map("estado_anterior")
+  estadoNuevo    EstadoPedido @map("estado_nuevo")
+  nota           String?      @db.VarChar(200)
+  cambiadoPorId  Int          @map("cambiado_por_id")
+  cambiadoPor    User         @relation(fields: [cambiadoPorId], references: [id], onDelete: Restrict)
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@index([pedidoId])
+  @@map("historial_estado_pedido")
 }

@@ -1,4 +1,4 @@
-onst { EstadoPedido } = require("@prisma/client");
+const { EstadoPedido } = require("@prisma/client");
 const prisma = require("../db/prisma");
 const HttpError = require("../utils/httpError");
 
