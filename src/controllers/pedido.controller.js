@@ -34,4 +34,13 @@ const cancel = async (req, res, next) => {
   }
 };
 
-module.exports = { create, listMine, cancel };
+// GET /api/pedidos/:id/historial → 200 { pedidoId, estado, historial } (Taller C)
+const history = async (req, res, next) => {
+  try {
+    res.json(await pedidoService.getHistory(req.user, parseId(req)));
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { create, listMine, cancel, history };
