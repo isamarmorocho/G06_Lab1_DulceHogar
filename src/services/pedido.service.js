@@ -1,13 +1,15 @@
 const prisma = require("../db/prisma");
 const HttpError = require("../utils/httpError");
 
-// SERVICIO de pedidos: el recurso limitado es el stock de cada postre
+// SERVICIO de pedidos: el recurso limitado es el stock de cada postre.
+// Toda operación que cambia stock y pedido a la vez va en una TRANSACCIÓN: todo o nada.
 
 // Cómo se devuelve un pedido: con sus ítems y el nombre del postre (fetch explícito)
 const pedidoInclude = {
   items: { include: { postre: { select: { id: true, nombre: true } } } },
 };
 
+// El pedido lo hace un cliente: buscamos el perfil 1:1 del usuario autenticado
 const clienteDe = async (userId) => {
   const cliente = await prisma.cliente.findUnique({ where: { userId } });
   if (!cliente) throw new HttpError(403, "El usuario no tiene perfil de cliente");
@@ -54,10 +56,11 @@ const create = async (userId, items) => {
     return tx.pedido.create({
       data: { clienteId: cliente.id, total: Math.round(total * 100) / 100, items: { create: lineas } },
       include: pedidoInclude,
-    }); 
+    }); // → COMMIT
   });
 };
 
+// Pedidos del usuario autenticado, con ítems y postres (include) y los más nuevos primero (orderBy)
 const listByUser = async (userId) => {
   const cliente = await clienteDe(userId);
   return prisma.pedido.findMany({
@@ -70,7 +73,7 @@ const listByUser = async (userId) => {
 // TRANSACCIÓN: cambia el estado a CANCELADO y devuelve el stock de cada ítem.
 // 404 si el pedido no existe · 403 si no es del cliente · 409 si ya no está PENDIENTE
 const cancel = async (userId, pedidoId) => {
- const cliente = await clienteDe(userId);
+  const cliente = await clienteDe(userId);
 
   return prisma.$transaction(async (tx) => {
     const pedido = await tx.pedido.findUnique({ where: { id: pedidoId }, include: { items: true } });
@@ -87,8 +90,38 @@ const cancel = async (userId, pedidoId) => {
     for (const it of pedido.items) {
       await tx.postre.update({ where: { id: it.postreId }, data: { stock: { increment: it.cantidad } } });
     }
+
+    // RETO OPCIONAL (Taller C): la cancelación que hace el propio cliente también queda en el historial
+    await tx.historialEstadoPedido.create({
+      data: {
+        pedidoId,
+        estadoAnterior: "PENDIENTE",
+        estadoNuevo: "CANCELADO",
+        nota: "Cancelado por el cliente",
+        cambiadoPorId: userId,
+      },
+    });
     return tx.pedido.findUnique({ where: { id: pedidoId }, include: pedidoInclude });
   });
 };
 
-module.exports = { create, listByUser, cancel };
+// Estado actual y cambios en orden cronológico, con el nombre de quien hizo cada uno.
+// 404 si no existe · 403 si no es el dueño del pedido ni ADMIN
+const getHistory = async (user, pedidoId) => {
+  const pedido = await prisma.pedido.findUnique({
+    where: { id: pedidoId },
+    include: {
+      cliente: { select: { userId: true } },
+      historial: {
+        orderBy: { createdAt: "asc" }, // cronológico: el primero es el más antiguo
+        include: { cambiadoPor: { select: { id: true, name: true } } },
+      },
+    },
+  });
+  if (!pedido) throw new HttpError(404, "Pedido no encontrado");
+  if (user.role !== "ADMIN" && pedido.cliente.userId !== user.id) throw new HttpError(403, "Este pedido no es tuyo");
+
+  return { pedidoId: pedido.id, estado: pedido.estado, historial: pedido.historial };
+};
+
+module.exports = { create, listByUser, cancel, getHistory };
