@@ -244,7 +244,7 @@ Cada integrante agregó una funcionalidad completa a la API: contrato, modelo en
 
 | Tarjeta | Integrante | Funcionalidad | Rama | Pull Request |
 |---|---|---|---|---|
-| A | Joselyn Morocho (integradora) | Reseñas de postres | `taller/a-joselyn` | (enlace) |
+| A | Joselyn Morocho (integradora) | Reseñas de postres | `taller/a-joselyn` | https://github.com/isamarmorocho/G06_Lab1_DulceHogar/pull/4 |
 | B | Matias Rojas | Categorías y búsqueda avanzada | `taller/b-matias` | (enlace) |
 | C | Jonathan Guayta | Flujo de estados con historial | `taller/c-jonathan` | (enlace) |
 
