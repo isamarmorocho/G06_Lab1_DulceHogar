@@ -246,7 +246,7 @@ Cada integrante agregó una funcionalidad completa a la API: contrato, modelo en
 |---|---|---|---|---|
 | A | Joselyn Morocho (integradora) | Reseñas de postres | `taller/a-joselyn` | https://github.com/isamarmorocho/G06_Lab1_DulceHogar/pull/4 |
 | B | Matias Rojas | Categorías y búsqueda avanzada | `taller/b-matias` | https://github.com/isamarmorocho/G06_Lab1_DulceHogar/pull/5 |
-| C | Jonathan Guayta | Flujo de estados con historial | `taller/c-jonathan` | (enlace) |
+| C | Jonathan Guayta | Flujo de estados con historial | `taller/c-jonathan` | https://github.com/isamarmorocho/G06_Lab1_DulceHogar/pull/6 |
 
 Adaptación de nombres: `Product` → `Postre`, `Order` → `Pedido`, `OrderStatus` → `EstadoPedido`, `Customer` → `Cliente`.
 
