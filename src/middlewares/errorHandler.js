@@ -1,4 +1,5 @@
 const { Prisma } = require("@prisma/client");
+const mongoose = require("mongoose");
 
 // Traduce los errores conocidos de Prisma a códigos HTTP
 const fromPrisma = (err) => {
@@ -16,12 +17,28 @@ const fromPrisma = (err) => {
   return null;
 };
 
+// Unidad 2: traduce los errores de Mongoose/MongoDB
+const fromMongoose = (err) => {
+  // ValidationError: un mensaje por cada campo que falló (los del esquema, incluida la validación propia)
+  if (err instanceof mongoose.Error.ValidationError) {
+    const errors = Object.values(err.errors).map((e) => ({ campo: e.path, mensaje: e.message }));
+    return { status: 400, message: "Datos inválidos", errors };
+  }
+  // Índice único (codigo repetido) → código 11000 del driver
+  if (err?.code === 11000) {
+    const campo = Object.keys(err.keyPattern ?? {})[0] ?? "campo único";
+    return { status: 409, message: `Ya existe un documento con ese valor único (${campo})` };
+  }
+  return null;
+};
+
 // Manejador de errores: 4 parámetros. Responde siempre en JSON.
 const errorHandler = (err, req, res, next) => {
-  const mapped = fromPrisma(err);
+  const mapped = fromPrisma(err) ?? fromMongoose(err);
   // JSON mal formado en el body → 400
   const status = mapped?.status ?? (err.type === "entity.parse.failed" ? 400 : err.status || 500);
   const body = { error: status === 500 ? "Error interno del servidor" : mapped?.message ?? err.message };
+  if (mapped?.errors) body.errors = mapped.errors;
   if (status === 500) {
     console.error(err);
     // En desarrollo se muestra el detalle; en producción, nunca
