@@ -1,0 +1,155 @@
+{
+  "info": {
+    "name": "G06_LabU2_Hito3",
+    "description": "Laboratorio U2 · Hito 3 · Dulce Hogar. POST /api/recetas (MongoDB + Mongoose). Antes de repetir la prueba 01 borren la colección recetas en Compass: el código REC-001 es único.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 · POST válido → 201",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+              "const r = pm.response.json();",
+              "pm.test(\"Tiene _id de MongoDB\", () => pm.expect(r._id).to.match(/^[a-f0-9]{24}$/));",
+              "pm.test(\"El virtual duracion aparece (90 min → 1 h 30 min)\", () => pm.expect(r.duracion).to.eql(\"1 h 30 min\"));",
+              "pm.test(\"pre(validate) normalizó los alérgenos (minúsculas y sin repetidos)\", () => pm.expect(r.alergenos).to.eql([\"gluten\", \"lactosa\"]));",
+              "pm.test(\"El código se guardó en mayúsculas\", () => pm.expect(r.codigo).to.match(/^REC-\\d{3}$/));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"postreId\": 1,\n  \"codigo\": \"REC-001\",\n  \"nombre\": \"Torta de chocolate húmeda\",\n  \"dificultad\": \"media\",\n  \"tiempoMin\": 90,\n  \"ingredientes\": [\n    {\n      \"nombre\": \"harina de trigo\",\n      \"cantidad\": 300,\n      \"unidad\": \"g\"\n    },\n    {\n      \"nombre\": \"cacao amargo\",\n      \"cantidad\": 80,\n      \"unidad\": \"g\"\n    }\n  ],\n  \"alergenos\": [\n    \" Gluten \",\n    \"LACTOSA\",\n    \"lactosa\"\n  ],\n  \"fotoUrl\": \"https://dulcehogar.example.com/fotos/torta.jpg\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/{{recurso}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "{{recurso}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "02 · POST vacío → 400 con mensajes de required",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
+              "const errors = pm.response.json().errors;",
+              "pm.test(\"Trae un mensaje por campo\", () => pm.expect(errors).to.be.an(\"array\").that.is.not.empty);",
+              "const msg = (campo) => (errors.find((e) => e.campo === campo) || {}).mensaje;",
+              "pm.test(\"Mensajes exactos de required\", () => {",
+              "  pm.expect(msg(\"postreId\")).to.eql(\"El postre es obligatorio\");",
+              "  pm.expect(msg(\"codigo\")).to.eql(\"El código es obligatorio\");",
+              "  pm.expect(msg(\"nombre\")).to.eql(\"El nombre es obligatorio\");",
+              "  pm.expect(msg(\"tiempoMin\")).to.eql(\"El tiempo de preparación es obligatorio\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/{{recurso}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "{{recurso}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "03 · POST inválido → 400 (enum, rango, match, validación propia)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
+              "const errors = pm.response.json().errors;",
+              "const msg = (campo) => (errors.find((e) => e.campo === campo) || {}).mensaje;",
+              "pm.test(\"Validación propia: postreId entero\", () => pm.expect(msg(\"postreId\")).to.eql(\"1.5 no es un número entero\"));",
+              "pm.test(\"Validación propia: al menos un ingrediente\", () => pm.expect(msg(\"ingredientes\")).to.eql(\"La receta debe tener al menos un ingrediente\"));",
+              "pm.test(\"Validación propia: URL de la foto\", () => pm.expect(msg(\"fotoUrl\")).to.eql(\"La foto debe ser una URL válida\"));",
+              "pm.test(\"match, minlength, enum y max\", () => {",
+              "  pm.expect(msg(\"codigo\")).to.eql(\"El código debe tener el formato REC-001\");",
+              "  pm.expect(msg(\"nombre\")).to.eql(\"El nombre debe tener al menos 3 caracteres\");",
+              "  pm.expect(msg(\"dificultad\")).to.eql(\"La dificultad debe ser facil, media o dificil\");",
+              "  pm.expect(msg(\"tiempoMin\")).to.eql(\"El tiempo máximo es 480 minutos\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"postreId\": 1.5,\n  \"codigo\": \"ABC\",\n  \"nombre\": \"Ab\",\n  \"dificultad\": \"imposible\",\n  \"tiempoMin\": 9999,\n  \"ingredientes\": [],\n  \"fotoUrl\": \"no-es-una-url\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/{{recurso}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "{{recurso}}"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "recurso",
+      "value": "recetas"
+    }
+  ]
+}
